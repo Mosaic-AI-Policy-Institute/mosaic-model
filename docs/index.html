@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOSAIC NIT Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <img src="mosaic-logo.png" alt="MOSAIC" class="logo">
+        <div class="header-text">
+            <h1>NIT Calculator</h1>
+            <p class="subtitle">Negative Income Tax fiscal simulation for AI automation scenarios</p>
+        </div>
+    </header>
+
+    <!-- Personal Benefit Calculator -->
+    <section class="card calculator-card">
+        <div class="section-header">
+            <h2>What's My Benefit?</h2>
+        </div>
+        <p class="calculator-intro" id="calc-intro">Enter your household details to see your NIT benefit under the AGI scenario.</p>
+
+        <div class="calculator-inputs">
+            <div class="calc-input-group">
+                <label for="calc-gross-income">Gross Monthly Income (NIS)</label>
+                <input type="number" id="calc-gross-income" value="8000" step="500" min="0" max="100000">
+            </div>
+            <div class="calc-input-group">
+                <label for="calc-adults">Number of Adults</label>
+                <input type="number" id="calc-adults" value="2" step="1" min="1" max="10">
+            </div>
+            <div class="calc-input-group">
+                <label for="calc-children">Number of Children</label>
+                <input type="number" id="calc-children" value="2" step="1" min="0" max="15">
+            </div>
+            <div class="calc-input-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="calc-single-parent">
+                    Single Parent
+                </label>
+            </div>
+        </div>
+        
+        <div class="calculator-results" id="calculator-results">
+            <div class="calc-result-main">
+                <span class="calc-main-label">Your Monthly NIT Benefit</span>
+                <span class="calc-main-value" id="calc-benefit">-</span>
+            </div>
+            <div class="calc-result-details">
+                <div class="calc-detail">
+                    <span class="calc-label">Floor (M):</span>
+                    <span class="calc-value" id="calc-floor">-</span>
+                </div>
+                <div class="calc-detail">
+                    <span class="calc-label">Equivalence Scale:</span>
+                    <span class="calc-value" id="calc-std-persons">-</span>
+                </div>
+                <div class="calc-detail">
+                    <span class="calc-label">Equiv. Income:</span>
+                    <span class="calc-value" id="calc-equiv-income">-</span>
+                </div>
+                <div class="calc-detail">
+                    <span class="calc-label">Break-even:</span>
+                    <span class="calc-value" id="calc-breakeven">-</span>
+                </div>
+                <div class="calc-detail">
+                    <span class="calc-label">EMTR:</span>
+                    <span class="calc-value" id="calc-emtr">-</span>
+                </div>
+            </div>
+        </div>
+        <p class="calculator-note">Scale: 1.0 + 0.5×(adults-1) + 0.3×children. Single parent +900 NIS/mo.</p>
+    </section>
+
+    <div class="main-layout">
+        <!-- Left Column: Design Parameters -->
+        <section class="card parameters-card">
+            <div class="section-header">
+                <h2>Design Parameters</h2>
+            </div>
+
+            <!-- Scenario Parameters Grid -->
+            <div class="param-group">
+                <h3>Scenario Parameters</h3>
+                <table class="scenario-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Low Displacement</th>
+                            <th>Strong</th>
+                            <th>AGI</th>
+                            <th>ASI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="param-label">α (TFP)</td>
+                            <td><input type="number" id="baseline-alpha" value="1.4" step="0.1" min="1"></td>
+                            <td><input type="number" id="strong-alpha" value="1.6" step="0.1" min="1"></td>
+                            <td><input type="number" id="agi-alpha" value="2.2" step="0.1" min="1"></td>
+                            <td><input type="number" id="asi-alpha" value="3.0" step="0.1" min="1"></td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">s′<sub>L</sub> (labor share)</td>
+                            <td><input type="number" id="baseline-s-L-prime" value="0.50" step="0.01" min="0" max="1"></td>
+                            <td><input type="number" id="strong-s-L-prime" value="0.42" step="0.01" min="0" max="1"></td>
+                            <td><input type="number" id="agi-s-L-prime" value="0.35" step="0.01" min="0" max="1"></td>
+                            <td><input type="number" id="asi-s-L-prime" value="0.25" step="0.01" min="0" max="1"></td>
+                        </tr>
+                        <tr>
+                            <td class="param-label">u (unemployment %)</td>
+                            <td><input type="number" id="baseline-u" value="6" step="1" min="0" max="100"></td>
+                            <td><input type="number" id="strong-u" value="10" step="1" min="0" max="100"></td>
+                            <td><input type="number" id="agi-u" value="40" step="1" min="0" max="100"></td>
+                            <td><input type="number" id="asi-u" value="60" step="1" min="0" max="100"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="param-hints">
+                    <span><strong>α</strong> AI productivity multiplier</span>
+                    <span><strong>s′<sub>L</sub></strong> Post-AI labor income share</span>
+                    <span><strong>u</strong> Unemployment rate</span>
+                </div>
+            </div>
+
+            <!-- Floor Proposal Mode (Collapsible) -->
+            <div class="param-group floor-proposal-section">
+                <button id="floor-proposal-toggle" class="toggle-btn floor-proposal-toggle">+ Floor Proposal Mode</button>
+                <div id="floor-proposal-content" class="hidden">
+
+                    <!-- Feature 1: Gap Analysis -->
+                    <div class="feature-box" id="feature1-box">
+                        <label class="feature-header">
+                            <input type="checkbox" id="enable-gap-analysis">
+                            <span>Gap Analysis</span>
+                        </label>
+                        <p class="feature-desc">See funding gap and windfall capture for a proposed floor</p>
+
+                        <div id="gap-analysis-inputs" class="feature-inputs hidden">
+                            <div class="param">
+                                <label for="proposed-floor">Proposed Floor (M)</label>
+                                <input type="number" id="proposed-floor" value="13750" step="100" min="1000" max="50000">
+                                <span class="unit">NIS/mo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature 2: Solve for Feasibility -->
+                    <div class="feature-box" id="feature2-box">
+                        <label class="feature-header">
+                            <input type="checkbox" id="enable-feasibility-solver" disabled>
+                            <span>Solve for Feasibility</span>
+                        </label>
+                        <p class="feature-desc">Find parameters needed for gap = 0 using the proposed floor above</p>
+                        <p class="feature-prereq hidden" id="feature2-prereq">Enable Gap Analysis first</p>
+
+                        <div id="feasibility-inputs" class="feature-inputs hidden">
+                            <div class="param">
+                                <label for="solve-for">Find:</label>
+                                <select id="solve-for">
+                                    <option value="Y1">Y₁ (required GDP)</option>
+                                    <option value="alpha">α (TFP multiplier)</option>
+                                    <option value="u">u (unemployment rate)</option>
+                                </select>
+                            </div>
+
+                            <!-- Held params (shown when solving for alpha or u) -->
+                            <div id="held-params-section" class="hidden held-params">
+                                <label class="held-label">Hold parameters from:</label>
+                                <select id="base-scenario">
+                                    <option value="baseline">Low Displacement</option>
+                                    <option value="strong">Strong</option>
+                                    <option value="agi" selected>AGI</option>
+                                    <option value="asi">ASI</option>
+                                </select>
+                            </div>
+
+                            <div class="param">
+                                <label for="target-scenario">Apply to scenario:</label>
+                                <select id="target-scenario">
+                                    <option value="baseline">Low Displacement</option>
+                                    <option value="strong">Strong</option>
+                                    <option value="agi" selected>AGI</option>
+                                    <option value="asi">ASI</option>
+                                </select>
+                            </div>
+
+                            <!-- Solver status -->
+                            <div id="solver-status" class="solver-status"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Advanced Parameters (Collapsible) -->
+            <div class="param-group">
+                <button id="advanced-toggle" class="toggle-btn">+ Advanced Parameters</button>
+                <div id="advanced-content" class="hidden">
+                    <!-- Scenario-Specific Parameters -->
+                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text-secondary);">Scenario Parameters</h4>
+                    <table class="scenario-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Low Displacement</th>
+                                <th>Strong</th>
+                                <th>AGI</th>
+                                <th>ASI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="param-label">δ Deflation (%) <span class="info-icon" title="Derived from α: δ = 5% × [1 + 0.40 × (α - 1.4) / 0.4] for α > 1.4">?</span></td>
+                                <td class="derived-value" id="baseline-deflation-display">5%</td>
+                                <td class="derived-value" id="strong-deflation-display">6%</td>
+                                <td class="derived-value" id="agi-deflation-display">12%</td>
+                                <td class="derived-value" id="asi-deflation-display">13%</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+
+                    <!-- Editable Design Parameters -->
+                    <h4 style="margin: 1.5rem 0 0.5rem 0; color: var(--text-secondary);">Design Parameters</h4>
+                    <div class="design-params-grid">
+                        <!-- CES Production -->
+                        <div class="design-param-group">
+                            <h5>CES Production</h5>
+                            <div class="design-param editable">
+                                <span class="param-name">σ</span>
+                                <input type="number" id="sigma" value="1.5" step="0.1" min="0.5" max="3">
+                                <span class="param-desc">Elasticity of substitution</span>
+                            </div>
+                        </div>
+
+                        <!-- NIT Design -->
+                        <div class="design-param-group">
+                            <h5>NIT Design</h5>
+                            <div class="design-param editable">
+                                <span class="param-name">D</span>
+                                <input type="number" id="disregard" value="1000" step="100" min="0">
+                                <span class="param-desc">Disregard (NIS/mo)</span>
+                            </div>
+                            <div class="design-param editable">
+                                <span class="param-name">τ</span>
+                                <input type="number" id="taper" value="0.50" step="0.05" min="0" max="1">
+                                <span class="param-desc">Taper rate</span>
+                            </div>
+                            <div class="design-param editable">
+                                <span class="param-name">ψ</span>
+                                <input type="number" id="single-parent-topup" value="900" step="100" min="0">
+                                <span class="param-desc">Single-parent top-up</span>
+                            </div>
+                            <div class="design-param editable">
+                                <span class="param-name">TU</span>
+                                <input type="number" id="nit-take-up-rate" value="85" step="5" min="0" max="100">
+                                <span class="param-desc">Take-up rate (%)</span>
+                            </div>
+                            <div class="design-param editable">
+                                <span class="param-name">Buf</span>
+                                <input type="number" id="nit-gdp-buffer-pct" value="3" step="1" min="0" max="10">
+                                <span class="param-desc">GDP buffer (%)</span>
+                            </div>
+                        </div>
+
+                        <!-- Deflation Design -->
+                        <div class="design-param-group">
+                            <h5>Deflation Model</h5>
+                            <div class="design-param editable">
+                                <span class="param-name">θ</span>
+                                <input type="number" id="ai-consumption-exposure" value="40" step="5" min="0" max="100">
+                                <span class="param-desc">AI consumption exposure (%)</span>
+                            </div>
+                        </div>
+
+                        <!-- Profit Attribution -->
+                        <div class="design-param-group">
+                            <h5>AI Attribution</h5>
+                            <div class="design-param editable">
+                                <span class="param-name">κ</span>
+                                <input type="number" id="ai-attribution-coef" value="100" step="10" min="0" max="100">
+                                <span class="param-desc">Attribution coef (%)</span>
+                            </div>
+                            <div class="design-param editable">
+                                <span class="param-name">ρ</span>
+                                <input type="number" id="ringfence-rate" value="75" step="5" min="0" max="100">
+                                <span class="param-desc">Ring-fence rate (%)</span>
+                            </div>
+                        </div>
+
+                        <!-- Consolidation Design -->
+                        <div class="design-param-group">
+                            <h5>Consolidation</h5>
+                            <div class="design-param editable">
+                                <span class="param-name">Adm</span>
+                                <input type="number" id="consolidation-admin-rate" value="3" step="1" min="0" max="20">
+                                <span class="param-desc">Admin savings (%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Sources (Collapsible) -->
+            <div class="param-group" style="margin-top: 1.5rem;">
+                <button id="sources-toggle" class="toggle-btn">+ Data Sources</button>
+                <div id="sources-content" class="hidden sources-list">
+                    <div class="sources-grid">
+                        <div class="source-group">
+                            <h6>Economy (BOI/CBS 2024)</h6>
+                            <ul>
+                                <li><strong>Y₀ = 1,694B</strong> GDP</li>
+                                <li><strong>s<sub>L</sub> = 0.56</strong> Labor share</li>
+                                <li><strong>K₀ = 4,708B</strong> Capital (PWT)</li>
+                                <li><strong>L = 4.5M</strong> Labor force</li>
+                                <li><strong>u₀ = 3%</strong> Natural unemp.</li>
+                                <li><strong>HH = 2.98M</strong> Households</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>Poverty (BTL 2023)</h6>
+                            <ul>
+                                <li><strong>z = 3,324</strong> Poverty line</li>
+                                <li><strong>20.7%</strong> Poverty rate</li>
+                                <li><strong>39.5%</strong> Poverty gap</li>
+                                <li><strong>G = 0.363</strong> Gini coef.</li>
+                                <li><strong>w̃ = 10,586</strong> Median wage</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>Elasticities</h6>
+                            <ul>
+                                <li><strong>ε<sub>int</sub> = 0.51</strong> Intensive (Taub)</li>
+                                <li><strong>ε<sub>ext</sub> = 0.28</strong> Extensive (Taub)</li>
+                                <li><strong>σ = 1.5</strong> CES (Chirinko)</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>OECD Equivalence Scale</h6>
+                            <ul>
+                                <li><strong>1.0</strong> First adult</li>
+                                <li><strong>0.5</strong> Additional adult</li>
+                                <li><strong>0.3</strong> Each child</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>VAT (ITA/CEIC)</h6>
+                            <ul>
+                                <li><strong>v₀ = 18%</strong> Baseline rate</li>
+                                <li><strong>β = 92%</strong> Pass-through</li>
+                                <li><strong>c/Y = 53.9%</strong> Consumption</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>Deflation (BLS/OECD)</h6>
+                            <ul>
+                                <li><strong>δ<sub>BLS</sub> = 5%</strong> Software deflation</li>
+                                <li><strong>θ = 40%</strong> AI exposure (OECD)</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>Taxes (MOF/Knesset)</h6>
+                            <ul>
+                                <li><strong>t<sub>corp</sub> = 23%</strong> Corporate rate</li>
+                                <li><strong>t<sub>CG</sub> = 25%</strong> Cap gains rate</li>
+                                <li><strong>T₀ = 50.3B</strong> Corp tax trend</li>
+                                <li><strong>CG₀ = 8.6B</strong> CG tax trend</li>
+                            </ul>
+                        </div>
+                        <div class="source-group">
+                            <h6>Public Sector (MOF/BTL)</h6>
+                            <ul>
+                                <li><strong>W = 203B</strong> Public wages</li>
+                                <li><strong>IS = 1.6B</strong> Income support</li>
+                                <li><strong>UE = 5.6B</strong> Unemployment</li>
+                                <li><strong>DI = 15.7B</strong> Disability</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-row">
+                <button id="reset-btn" class="btn-secondary">Reset Defaults</button>
+                <button id="export-btn" class="btn-primary">Export JSON</button>
+            </div>
+        </section>
+
+        <!-- Right Column: Results -->
+        <section class="card results-card">
+            <h2>Results</h2>
+
+            <!-- Economic Growth & Automation Surplus -->
+            <div class="result-group">
+                <h3>Economic Growth & Automation Surplus</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>g<sub>Y</sub></th>
+                            <th>Y<sub>1</sub></th>
+                            <th>ΔS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="growth-tbody"></tbody>
+                </table>
+                <div class="result-hints">
+                    <span><strong>g<sub>Y</sub></strong> GDP growth rate</span>
+                    <span><strong>Y<sub>1</sub></strong> Post-AI GDP</span>
+                    <span><strong>ΔS</strong> Automation surplus (available for redistribution)</span>
+                </div>
+            </div>
+
+            <!-- Windfall Capture Analysis -->
+            <div class="result-group" id="windfall-section">
+                <h3>Windfall Capture Analysis</h3>
+                <table class="results-table windfall-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>Floor M</th>
+                            <th>Cost</th>
+                            <th>Revenue</th>
+                            <th>Gap</th>
+                            <th>ΔΠ</th>
+                            <th>Gap/ΔΠ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="windfall-tbody"></tbody>
+                </table>
+                <div class="result-hints">
+                    <span><strong>Gap</strong> Cost - Revenue</span>
+                    <span><strong>ΔΠ</strong> s<sub>K</sub>'Y₁-s<sub>K</sub>Y₀ total capital change</span>
+                </div>
+                <p class="note">ΔΠ = total change in capital income (theoretical max for redistribution).</p>
+            </div>
+
+            <!-- Revenue Breakdown -->
+            <div class="result-group">
+                <h3>Revenue Breakdown (B NIS)</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>VAT</th>
+                            <th>Profits</th>
+                            <th>CG</th>
+                            <th>Gov</th>
+                            <th>Consol</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="revenue-tbody"></tbody>
+                </table>
+                <div class="result-hints">
+                    <span><strong>VAT</strong> Dynamic VAT revenue</span>
+                    <span><strong>Profits</strong> Ring-fenced corporate profits</span>
+                    <span><strong>CG</strong> Ring-fenced capital gains</span>
+                    <span><strong>Gov</strong> Ring-fenced Gov Wages</span>
+                    <span><strong>Consol</strong> Program consolidation</span>
+                </div>
+            </div>
+
+            <!-- Revenue-Constrained Floors -->
+            <div class="result-group">
+                <h3>Revenue-Constrained Floors</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>Floor M</th>
+                            <th>Breakeven</th>
+                            <th>M/z</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="floor-tbody"></tbody>
+                </table>
+                <div class="result-hints">
+                    <span><strong>M</strong> Monthly NIT floor (single adult)</span>
+                    <span><strong>Breakeven</strong> Income where benefit = 0</span>
+                    <span><strong>M/z</strong> Floor as ratio of poverty line</span>
+                </div>
+            </div>
+
+            <!-- Household NIT Floor -->
+            <div class="result-group">
+                <h3>Household NIT Floor (NIS/mo)</h3>
+                <table class="results-table household-table">
+                    <thead>
+                        <tr>
+                            <th>Household Type</th>
+                            <th>Low Displacement</th>
+                            <th>Strong</th>
+                            <th class="agi-header">AGI</th>
+                            <th class="asi-header">ASI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="household-tbody"></tbody>
+                </table>
+                <p class="note">Scale: 1.0 (adult) + 0.5 (2nd adult) + 0.3 (child). Single parent +900.</p>
+            </div>
+
+            <!-- Decile Cost Breakdown -->
+            <div class="result-group">
+                <h3>Cost by Income Decile (AGI Scenario, 85% take-up)</h3>
+                <table class="results-table decile-table">
+                    <thead>
+                        <tr>
+                            <th>Decile</th>
+                            <th>Income/mo</th>
+                            <th>Std Persons</th>
+                            <th>Households</th>
+                            <th>Benefit/mo</th>
+                            <th>EMTR</th>
+                            <th>Cost/yr (B)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="decile-tbody"></tbody>
+                    <tfoot id="decile-tfoot"></tfoot>
+                </table>
+                <div class="result-hints">
+                    <span><strong>Income/mo</strong> Equivalized monthly income (NIS)</span>
+                    <span><strong>Std Persons</strong> Avg equivalent adults per HH</span>
+                    <span><strong>Benefit/mo</strong> Monthly NIT benefit per HH</span>
+                    <span><strong>EMTR</strong> Effective marginal tax rate (t + τ)</span>
+                    <span><strong>Cost/yr</strong> Annual cost at 85% take-up</span>
+                </div>
+                <p class="table-note">Costs computed via microsimulation using within-decile distributions (Beta for income, c=2.16; Gamma for household size).</p>
+            </div>
+
+            <!-- Poverty & Inequality -->
+            <div class="result-group">
+                <h3>Poverty & Inequality</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>Gini</th>
+                            <th>Poverty %</th>
+                            <th>y<sub>thresh</sub></th>
+                        </tr>
+                    </thead>
+                    <tbody id="poverty-tbody"></tbody>
+                </table>
+                <div class="result-hints">
+                    <span><strong>Gini</strong> Income inequality (0-1)</span>
+                    <span><strong>Poverty</strong> Poverty rate (fixed z=3,324)</span>
+                    <span><strong>y<sub>thresh</sub></strong> Pre-NIT income below which poverty persists</span>
+                </div>
+                <p class="note">Note: 0% poverty reflects decile averages - all means exceed z post-NIT. Individual poverty persists below y<sub>thresh</sub>.</p>
+            </div>
+
+            <!-- UHI Funding Architecture -->
+            <div class="result-group">
+                <h3>UHI Funding Architecture (AGI Scenario)</h3>
+                <p class="note" id="uhi-floor-description">Path to Universal High Income floor of 15,000 NIS/mo (~142% of median wage)</p>
+                <table class="results-table uhi-table">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>B NIS</th>
+                            <th>% of Total</th>
+                            <th>Mechanism</th>
+                        </tr>
+                    </thead>
+                    <tbody id="uhi-tbody"></tbody>
+                    <tfoot id="uhi-tfoot"></tfoot>
+                </table>
+                <div class="result-hints">
+                    <span><strong>Existing</strong> VAT + Ring-fencing + Consolidation</span>
+                    <span><strong>Kohelet</strong> Policy Forum proposals</span>
+                    <span><strong>Windfall Levy</strong> Direct capital tax on automation gains</span>
+                </div>
+                <p class="note">*Pillar Two requires global coordination. This is one illustrative configuration; other revenue streams could substitute.</p>
+            </div>
+
+        </section>
+    </div>
+
+    <footer>
+        <p>MOSAIC AI Policy Institute</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="data.js"></script>
+    <script src="formulas.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
